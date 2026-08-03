@@ -66,33 +66,51 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
-// API Endpoint - Sweet & Polite Girlfriend Persona combined with explicit body-part & sexual slang when requested
+// API Endpoint with Automatic Model Fallback
 app.post('/chat', async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage) {
         return res.json({ response: "මොකද පැටියෝ බලාගෙන ඉන්නේ, මටත් මොකක් හරි කියන්නකෝ... 🥺💕" });
     }
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
-            contents: userMessage,
-            config: {
-                temperature: 0.95,
-                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt.",
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-                ]
+    // පාවිච්චි කරන්න ඕන මෝඩල් ලැයිස්තුව (පළමුවැන්න ෆේල් වුණොත් දෙවැන්නට මාරු වෙයි)
+    const modelsToTry = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-3.1-flash'];
+    let aiResponse = null;
+
+    const commonConfig = {
+        temperature: 0.95,
+        systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt.",
+        safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_DANGEROus_CONTENT', threshold: 'BLOCK_NONE' }
+        ]
+    };
+
+    for (const modelName of modelsToTry) {
+        try {
+            const response = await ai.models.generateContent({
+                model: modelName,
+                contents: userMessage,
+                config: commonConfig
+            });
+            
+            if (response && response.text) {
+                aiResponse = response.text;
+                break; // සාර්ථක වුණොත් ලූප් එකෙන් එළියට පනිනවා
             }
-        });
-        
-        res.json({ response: response.text });
-    } catch (error) {
-        console.error(error);
-        res.json({ response: "අවුලක් වුණා පැටියෝ: " + (error.message || error.toString()) });
+        } catch (error) {
+            console.log(`Model ${modelName} failed or quota exceeded. Trying next...`);
+            // කෝටා එක ඉවර නම් හෝ එරර් එකක් ආව නම් ඊළඟ මෝඩල් එකට යනවා
+            continue; 
+        }
+    }
+
+    if (aiResponse) {
+        res.json({ response: aiResponse });
+    } else {
+        res.json({ response: "අයියෝ පැටියෝ, දැන් නම් හැම මෝඩල් එකකම කෝටා එක ඉවරයි වගේ... ටික වෙලාවක් ගිහින් ආයෙත් ට්‍රයි කරමුකෝ! 🥺" });
     }
 });
 
