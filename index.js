@@ -8,7 +8,7 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY 
 });
 
-// Frontend UI (සම්පූර්ණයෙන්ම සිංහලෙන් සහ ඩارක් මෝඩ් ಲುක් එකෙන්)
+// Frontend UI
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="si">
@@ -29,7 +29,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
     <div id="chat-box">
-        <div class="message ai">අම්මෝ පකයා, අද මොකක්ද වෙන්න ඕනේ? කියපන් බලන්න... 😈🔥</div>
+        <div class="message ai">ආන්ඩුව ගෙනියන්න එපා පකයා, මම මෙතන ඉන්නවා... කියපන් මොකද වෙන්න ඕනේ? 😈</div>
     </div>
     <div id="input-area">
         <input type="text" id="user-input" placeholder="මෙහි ලියන්න..." onkeypress="if(event.key === 'Enter') sendMessage()">
@@ -66,20 +66,20 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
-// API Endpoint - 3.6 Flash & Sinhala Slang Logic
+// API Endpoint - Calm, Female Persona with Raw Vulgar Slang Support
 app.post('/chat', async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage) {
-        return res.json({ response: "මොකද පකයා බලාගෙන ඉන්නේ, කතා කරපන්..." });
+        return res.json({ response: "මොකද පකයා කතා නොකර බලාගෙන ඉන්නේ..." });
     }
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
+            model: 'gemini-1.5-flash',
             contents: userMessage,
             config: {
-                temperature: 1.0,
-                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are an extremely casual, street-smart, and raw local companion from Sri Lanka. By default, you talk in a friendly yet rough street style. However, if the user uses heavy slang, vulgar words, or asks in a rough tone, you must adapt and match that exact heavy slang and vulgar style dynamically based on how they ask. Never be formal, never reply in English.",
+                temperature: 0.9,
+                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a local Sri Lankan girl. You must speak in a very calm, collected, and relaxed tone (clam down style), but you use heavy local slang, rough phrasing, and vulgar words naturally whenever it fits the vibe, matching the user's raw energy. Never be overly excited or robotic; stay cool, composed, and raw.",
                 safetySettings: [
                     { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
                     { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
