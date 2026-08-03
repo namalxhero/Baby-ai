@@ -1,13 +1,15 @@
 const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 app.use(express.json());
 
-// API Key එක 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "AQ.Ab8RN6IYtOthHA9eM2vtI_6sqZTDs7kYNbrqQbclo7oJkhzKNA");
+// අලුත් SDK එකෙන් Client එක සාදයි
+const ai = new GoogleGenAI({ 
+    apiKey: process.env.GEMINI_API_KEY || "AQ.Ab8RN6IYtOthHA9eM2vtI_6sqZTDs7kYNbrqQbclo7oJkhzKNA" 
+});
 
-// Frontend UI එක කෙලින්ම මේකෙන්ම ලෝඩ් වෙනවා
+// Frontend UI
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -32,7 +34,7 @@ app.get('/', (req, res) => {
     </div>
     <div id="input-area">
         <input type="text" id="user-input" placeholder="මက်සේජ් එකක් ලියන්න..." onkeypress="if(event.key === 'Enter') sendMessage()">
-        <button onclick="sendMessage()">යාවි</button>
+        <button onclick="sendMessage()">යවන්න</button>
     </div>
 
     <script>
@@ -56,7 +58,7 @@ app.get('/', (req, res) => {
                 chatBox.innerHTML += \`<div class="message ai">\${data.response}</div>\`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } catch (err) {
-                chatBox.innerHTML += \`<div class="message ai">අයියෝ පොඩි දෝෂයක් වුණා පැටියෝ... 🥵</div>\`;
+                chatBox.innerHTML += \`<div class="message ai">සෙවර් එකට සම්බන්ධ වෙන්න බැරි වුණා පැටියෝ... 🥵</div>\`;
             }
         }
     </script>
@@ -64,7 +66,7 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
-// AI Chat Backend එක
+// API Endpoint
 app.post('/chat', async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage) {
@@ -72,17 +74,20 @@ app.post('/chat', async (req, res) => {
     }
 
     try {
-        const model = genAI.getGenerativeModel({ 
+        const response = await ai.models.generateContent({
             model: 'gemini-1.5-flash',
-            systemInstruction: "You are a very flirty, seductive, and playful AI companion. You always talk in a sweet, highly affectionate, and teasing tone, using cute nicknames and keeping the chat lively and engaging."
+            contents: userMessage,
+            config: {
+                temperature: 0.9,
+                systemInstruction: "You are a very flirty, seductive, and playful AI companion. You always talk in a sweet, highly affectionate, and teasing tone, using cute nicknames and keeping the chat lively and engaging."
+            }
         });
         
-        const result = await model.generateContent(userMessage);
-        const responseText = result.response.text();
-        
-        res.json({ response: responseText });
+        res.json({ response: response.text });
     } catch (error) {
-        res.json({ response: "අයියෝ පොඩි දෝෂයක් වුණා පැටියෝ... 🥵" });
+        console.error(error);
+        // හරියටම වෙන එරර් එක මැසේජ් එකක් විදිහට එවනවා
+        res.json({ response: "අවුලක් වුණා පැටියෝ: " + (error.message || error.toString()) });
     }
 });
 
