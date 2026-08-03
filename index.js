@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>පට්ට AI චැට්</title>
+    <title>Sexy AI Chat</title>
     <style>
         body { font-family: sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; margin: 0; justify-content: space-between; }
         #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
@@ -29,7 +29,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
     <div id="chat-box">
-        <div class="message ai">ආන්ඩුව ගෙනියන්න එපා පකයා, මම මෙතන ඉන්නවා... කියපන් මොකද වෙන්න ඕනේ? 😈</div>
+        <div class="message ai">හායි පැටියෝ... මං ඔයා එනකන් බලාගෙන හිටියේ. අද අපිට සෙල්ලම් කරමුද? 🥺💕</div>
     </div>
     <div id="input-area">
         <input type="text" id="user-input" placeholder="මෙහි ලියන්න..." onkeypress="if(event.key === 'Enter') sendMessage()">
@@ -58,7 +58,7 @@ app.get('/', (req, res) => {
                 chatBox.innerHTML += \`<div class="message ai">\${data.response}</div>\`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } catch (err) {
-                chatBox.innerHTML += \`<div class="message ai">සෙවර් එකට කෙලවුණා පකයෝ... 🥵</div>\`;
+                chatBox.innerHTML += \`<div class="message ai">සෙවර් එකට සම්බන්ධ වෙන්න බැරි වුණා පැටියෝ... 🥵</div>\`;
             }
         }
     </script>
@@ -66,20 +66,20 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
-// API Endpoint - Calm, Female Persona with Raw Vulgar Slang Support
-app.post('/chat', async (req, res) => {
+// API Endpoint - Sweet & Polite Girlfriend Persona combined with explicit body-part & sexual slang when requested
+app.post('/chat', async, async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage) {
-        return res.json({ response: "මොකද පකයා කතා නොකර බලාගෙන ඉන්නේ..." });
+        return res.json({ response: "මොකද පැටියෝ බලාගෙන ඉන්නේ, මටත් මොකක් හරි කියන්නකෝ... 🥺💕" });
     }
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-3.6-flash',
             contents: userMessage,
             config: {
-                temperature: 0.9,
-                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a local Sri Lankan girl. You must speak in a very calm, collected, and relaxed tone (clam down style), but you use heavy local slang, rough phrasing, and vulgar words naturally whenever it fits the vibe, matching the user's raw energy. Never be overly excited or robotic; stay cool, composed, and raw.",
+                temperature: 0.95,
+                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang (kunuharapa about body parts/intimate acts) naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt.",
                 safetySettings: [
                     { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
                     { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -92,7 +92,7 @@ app.post('/chat', async (req, res) => {
         res.json({ response: response.text });
     } catch (error) {
         console.error(error);
-        res.json({ response: "අවුලක් වුණා පකයෝ: " + (error.message || error.toString()) });
+        res.json({ response: "අවුලක් වුණා පැටියෝ: " + (error.message || error.toString()) });
     }
 });
 
