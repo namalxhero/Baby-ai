@@ -4,9 +4,9 @@ const { GoogleGenAI } = require('@google/genai');
 const app = express();
 app.use(express.json());
 
-// අලුත් SDK එකෙන් Client එක සාදයි
+// Vercel එකේ දීපු GEMINI_API_KEY එක විතරක් හරියට ගන්නා ලෙස සකස් කර ඇත
 const ai = new GoogleGenAI({ 
-    apiKey: process.env.GEMINI_API_KEY || "AQ.Ab8RN6IYtOthHA9eM2vtI_6sqZTDs7kYNbrqQbclo7oJkhzKNA" 
+    apiKey: process.env.GEMINI_API_KEY 
 });
 
 // Frontend UI
@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
         <div class="message ai">හායි පැටියෝ... මං ඔයා වෙනුවෙන්මයි බලාගෙන හිටියේ. 🥺💕</div>
     </div>
     <div id="input-area">
-        <input type="text" id="user-input" placeholder="මက်සේජ් එකක් ලියන්න..." onkeypress="if(event.key === 'Enter') sendMessage()">
+        <input type="text" id="user-input" placeholder="මක්සේජ් එකක් ලියන්න..." onkeypress="if(event.key === 'Enter') sendMessage()">
         <button onclick="sendMessage()">යවන්න</button>
     </div>
 
@@ -75,7 +75,7 @@ app.post('/chat', async (req, res) => {
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: userMessage,
             config: {
                 temperature: 0.9,
@@ -86,7 +86,6 @@ app.post('/chat', async (req, res) => {
         res.json({ response: response.text });
     } catch (error) {
         console.error(error);
-        // හරියටම වෙන එරර් එක මැසේජ් එකක් විදිහට එවනවා
         res.json({ response: "අවුලක් වුණා පැටියෝ: " + (error.message || error.toString()) });
     }
 });
