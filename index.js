@@ -2,97 +2,192 @@ const express = require('express');
 const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const ai = new GoogleGenAI({ 
     apiKey: process.env.GEMINI_API_KEY 
 });
 
-// Frontend UI
+// Frontend UI with Chat History (localStorage) & Multimodal Support
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="si">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sexy AI Chat</title>
+    <title>Sexy AI Chat with History</title>
     <style>
         body { font-family: sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; margin: 0; justify-content: space-between; }
         #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
         .message { padding: 12px 16px; border-radius: 15px; max-width: 75%; line-height: 1.4; word-break: break-word; }
         .user { background: #ff4081; align-self: flex-end; color: white; }
         .ai { background: #333; align-self: flex-start; color: #ff80ab; }
-        #input-area { display: flex; padding: 15px; background: #1e1e1e; gap: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 25px; border: none; background: #2a2a2a; color: white; outline: none; padding-left: 20px; }
-        button { background: #ff4081; color: white; border: none; padding: 0 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        .message img, .message video { max-width: 200px; border-radius: 10px; margin-top: 5px; display: block; }
+        #input-area { display: flex; padding: 15px; background: #1e1e1e; gap: 10px; align-items: center; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: none; background: #2a2a2a; color: white; outline: none; padding-left: 20px; }
+        input[type="file"] { display: none; }
+        .file-btn { background: #333; color: #ff80ab; padding: 10px 15px; border-radius: 50%; cursor: pointer; font-weight: bold; border: 1px solid #ff80ab; text-align: center; }
+        button.send-btn { background: #ff4081; color: white; border: none; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        #file-name { font-size: 12px; color: #aaa; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     </style>
 </head>
 <body>
     <div id="chat-box">
-        <div class="message ai">හායි පැටියෝ... මං ඔයා එනකන් බලාගෙන හිටියේ. අද අපිට සෙල්ලම් කරමුද? 🥺💕</div>
+        <div class="message ai">හායි පැටියෝ... මං ඔයා එනකන් බලාගෙන හිටියේ. අද අපිට මොනවද කතා කරარන්න ඕනේ? 🥺💕</div>
     </div>
     <div id="input-area">
+        <label for="media-file" class="file-btn">📷</label>
+        <input type="file" id="media-file" accept="image/*,video/*" onchange="showFileName()">
+        <span id="file-name"></span>
         <input type="text" id="user-input" placeholder="මෙහි ලියන්න..." onkeypress="if(event.key === 'Enter') sendMessage()">
-        <button onclick="sendMessage()">යවන්න</button>
+        <button class="send-btn" onclick="sendMessage()">යවන්න</button>
     </div>
 
     <script>
+        // Load history from localStorage when page opens
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedHistory = localStorage.getItem('chat_history_html');
+            if (savedHistory) {
+                document.getElementById('chat-box').innerHTML = savedHistory;
+                scrollToBottom();
+            }
+        });
+
+        function showFileName() {
+            const fileInput = document.getElementById('media-file');
+            const fileNameSpan = document.getElementById('file-name');
+            if (fileInput.files.length > 0) {
+                fileNameSpan.textContent = fileInput.files[0].name;
+            } else {
+                fileNameSpan.textContent = '';
+            }
+        }
+
+        function scrollToBottom() {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
         async function sendMessage() {
             const input = document.getElementById('user-input');
+            const fileInput = document.getElementById('media-file');
             const chatBox = document.getElementById('chat-box');
             const text = input.value.trim();
-            if (!text) return;
+            const file = fileInput.files[0];
 
-            chatBox.innerHTML += \`<div class="message user">\${text}</div>\`;
+            if (!text && !file) return;
+
+            let userHtml = '<div class="message user">';
+            if (text) userHtml += \`<div>\${text}</div>\`;
+
+            let mediaData = null;
+            let mimeType = null;
+
+            if (file) {
+                mimeType = file.type;
+                const base64Data = await toBase64(file);
+                mediaData = base64Data.split(',')[1];
+
+                if (mimeType.startsWith('image/')) {
+                    userHtml += \`<img src="\${base64Data}">\`;
+                } else if (mimeType.startsWith('video/')) {
+                    userHtml += \`<video src="\${base64Data}" controls></video>\`;
+                }
+            }
+            userHtml += '</div>';
+            chatBox.innerHTML += userHtml;
+            scrollToBottom();
+
             input.value = '';
-            chatBox.scrollTop = chatBox.scrollHeight;
+            fileInput.value = '';
+            document.getElementById('file-name').textContent = '';
 
             try {
+                // Send full history context or just send the latest message (Backend manages chat session or history)
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
+                    body: JSON.stringify({ message: text, media: mediaData, mimeType: mimeType })
                 });
                 const data = await res.json();
                 
                 chatBox.innerHTML += \`<div class="message ai">\${data.response}</div>\`;
-                chatBox.scrollTop = chatBox.scrollHeight;
+                scrollToBottom();
+
+                // Save updated chat box HTML to localStorage
+                localStorage.setItem('chat_history_html', chatBox.innerHTML);
+
             } catch (err) {
                 chatBox.innerHTML += \`<div class="message ai">සෙවර් එකට සම්බන්ධ වෙන්න බැරි වුණා පැටියෝ... 🥵</div>\`;
+                scrollToBottom();
             }
         }
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
     </script>
 </body>
 </html>`);
 });
 
-// API Endpoint - Sweet & Polite Girlfriend Persona combined with explicit body-part & sexual slang when requested
+// API Endpoint with Model Fallback
 app.post('/chat', async (req, res) => {
-    const userMessage = req.body.message;
-    if (!userMessage) {
+    const { message, media, mimeType } = req.body;
+    if (!message && !media) {
         return res.json({ response: "මොකද පැටියෝ බලාගෙන ඉන්නේ, මටත් මොකක් හරි කියන්නකෝ... 🥺💕" });
     }
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash-lite',
-            contents: userMessage,
-            config: {
-                temperature: 0.95,
-                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt.",
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-                ]
+    const modelsToTry = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-2.5-flash'];
+    let aiResponse = null;
+
+    const commonConfig = {
+        temperature: 0.95,
+        systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt or uploaded media.",
+        safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+        ]
+    };
+
+    let contents = [];
+    if (media && mimeType) {
+        contents.push({
+            inlineData: {
+                data: media,
+                mimeType: mimeType
             }
         });
-        
-        res.json({ response: response.text });
-    } catch (error) {
-        console.error(error);
-        res.json({ response: "අවුලක් වුණා පැටියෝ: " + (error.message || error.toString()) });
+    }
+    contents.push(message || "මේක බලන්නකෝ පැටියෝ...");
+
+    for (const modelName of modelsToTry) {
+        try {
+            const response = await ai.models.generateContent({
+                model: modelName,
+                contents: contents,
+                config: commonConfig
+            });
+            
+            if (response && response.text) {
+                aiResponse = response.text;
+                break;
+            }
+        } catch (error) {
+            console.log(`Model ${modelName} failed. Trying next...`, error);
+            continue;
+        }
+    }
+
+    if (aiResponse) {
+        res.json({ response: aiResponse });
+    } else {
+        res.json({ response: "අයියෝ පැටියෝ, ටිකක් ඉඳලා ආයෙත් ට්‍රයි කරමුකෝ... 🥺" });
     }
 });
 
