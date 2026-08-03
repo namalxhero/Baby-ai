@@ -1,12 +1,7 @@
 const express = require('express');
-const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 app.use(express.json({ limit: '15mb' }));
-
-const ai = new GoogleGenAI({ 
-    apiKey: process.env.GEMINI_API_KEY 
-});
 
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
@@ -154,41 +149,53 @@ app.post('/chat', async (req, res) => {
             return res.json({ response: "මොකද පැටියෝ බලාගෙන ඉන්නේ, මටත් මොකක් හරි කියන්නකෝ... 🥺💕" });
         }
 
-        let contents = [];
+        const apiKey = process.env.GEMINI_API_KEY;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+        let parts = [];
         if (media && mimeType) {
-            contents.push({
+            parts.push({
                 inlineData: {
-                    data: media,
-                    mimeType: mimeType
+                    mimeType: mimeType,
+                    data: media
                 }
             });
         }
-        contents.push(message || "මේක බලන්නකෝ පැටියෝ...");
+        parts.push({ text: message || "මේක බලන්නකෝ පැටියෝ..." });
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: contents,
-            config: {
-                temperature: 0.95,
-                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt or uploaded media.",
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXTORTION', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-                ]
-            }
+        const payload = {
+            contents: [{ parts: parts }],
+            systemInstruction: {
+                parts: [{ text: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt or uploaded media." }]
+            },
+            generationConfig: {
+                temperature: 0.95
+            },
+            safetySettings: [
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+            ]
+        };
+
+        const apiRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
-        
-        if (response && response.text) {
-            return res.json({ response: response.text });
+
+        const data = await apiRes.json();
+
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            return res.json({ response: data.candidates[0].content.parts[0].text });
         } else {
+            console.error("API Error Response:", data);
             return res.json({ response: "අයියෝ පැටියෝ, රිප්ලයි එකක් එනකොට අවුලක් වුණා... 🥺" });
         }
 
     } catch (error) {
-        console.error("API Error:", error);
+        console.error("Server Error:", error);
         return res.json({ response: "අයියෝ පැටියෝ, සෙවර් එකේ දෝෂයක් ආවා... 🥵" });
     }
 });
