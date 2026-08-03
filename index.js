@@ -150,7 +150,12 @@ app.post('/chat', async (req, res) => {
         }
 
         const apiKey = process.env.GEMINI_API_KEY;
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        if (!apiKey) {
+            return res.json({ response: "අයියෝ පැටියෝ, Vercel එකේ API Key එක සෙට් කරලා නෑ වගේ! 🥺" });
+        }
+
+        // Using gemini-3.5-flash-lite as requested
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
 
         let parts = [];
         if (media && mimeType) {
@@ -168,9 +173,6 @@ app.post('/chat', async (req, res) => {
             systemInstruction: {
                 parts: [{ text: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt or uploaded media." }]
             },
-            generationConfig: {
-                temperature: 0.95
-            },
             safetySettings: [
                 { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
                 { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -187,11 +189,11 @@ app.post('/chat', async (req, res) => {
 
         const data = await apiRes.json();
 
-        if (data.candidates && data.candidates[0].content.parts[0].text) {
+        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
             return res.json({ response: data.candidates[0].content.parts[0].text });
         } else {
-            console.error("API Error Response:", data);
-            return res.json({ response: "අයියෝ පැටියෝ, රිප්ලයි එකක් එනකොට අවුලක් වුණා... 🥺" });
+            console.error("API Error Response:", JSON.stringify(data));
+            return res.json({ response: "අයියෝ පැටියෝ, ගූගල් ඒපීඅයි එකෙන් රිප්ලයි එකක් ආවේ නෑ (කී එක හෝ කෝටා ප්‍රශ්නයක් වෙන්න ඇති)... 🥺" });
         }
 
     } catch (error) {
@@ -205,4 +207,3 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 module.exports = app;
-
