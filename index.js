@@ -67,7 +67,7 @@ app.get('/', (req, res) => {
 });
 
 // API Endpoint - Sweet & Polite Girlfriend Persona combined with explicit body-part & sexual slang when requested
-app.post('/chat', async, async (req, res) => {
+app.post('/chat', async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage) {
         return res.json({ response: "මොකද පැටියෝ බලාගෙන ඉන්නේ, මටත් මොකක් හරි කියන්නකෝ... 🥺💕" });
@@ -75,11 +75,11 @@ app.post('/chat', async, async (req, res) => {
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
+            model: 'gemini-1.5-flash',
             contents: userMessage,
             config: {
                 temperature: 0.95,
-                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang (kunuharapa about body parts/intimate acts) naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt.",
+                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt.",
                 safetySettings: [
                     { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
                     { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
