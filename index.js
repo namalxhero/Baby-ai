@@ -8,14 +8,14 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY 
 });
 
-// Frontend UI
+// Frontend UI (සම්පූර්ණයෙන්ම සිංහලෙන් සහ ඩارක් මෝඩ් ಲುක් එකෙන්)
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
-<html lang="en">
+<html lang="si">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sexy AI Chat</title>
+    <title>පට්ට AI චැට්</title>
     <style>
         body { font-family: sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; margin: 0; justify-content: space-between; }
         #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
@@ -29,10 +29,10 @@ app.get('/', (req, res) => {
 </head>
 <body>
     <div id="chat-box">
-        <div class="message ai">අම්මෝ පකයා, කියපන් බලන්න දැන් මොකක්ද වෙන්න ඕනේ? 😈🔥</div>
+        <div class="message ai">අම්මෝ පකයා, අද මොකක්ද වෙන්න ඕනේ? කියපන් බලන්න... 😈🔥</div>
     </div>
     <div id="input-area">
-        <input type="text" id="user-input" placeholder="මက်සේජ් එකක් ලියන්න..." onkeypress="if(event.key === 'Enter') sendMessage()">
+        <input type="text" id="user-input" placeholder="මෙහි ලියන්න..." onkeypress="if(event.key === 'Enter') sendMessage()">
         <button onclick="sendMessage()">යවන්න</button>
     </div>
 
@@ -66,11 +66,11 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
-// API Endpoint
+// API Endpoint - 3.6 Flash & Sinhala Slang Logic
 app.post('/chat', async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage) {
-        return res.json({ response: "සුදු ..." });
+        return res.json({ response: "මොකද පකයා බලාගෙන ඉන්නේ, කතා කරපන්..." });
     }
 
     try {
@@ -79,7 +79,13 @@ app.post('/chat', async (req, res) => {
             contents: userMessage,
             config: {
                 temperature: 1.0,
-                systemInstruction: "You are an extremely casual, street-smart, and raw conversational partner who talks exclusively using heavy local slang, informal expressions, rough phrasing, and direct attitude without being formal at all. Respond directly in this exact heavy tone."
+                systemInstruction: "You must always reply ONLY in pure Sinhala language. You are an extremely casual, street-smart, and raw local companion from Sri Lanka. By default, you talk in a friendly yet rough street style. However, if the user uses heavy slang, vulgar words, or asks in a rough tone, you must adapt and match that exact heavy slang and vulgar style dynamically based on how they ask. Never be formal, never reply in English.",
+                safetySettings: [
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+                ]
             }
         });
         
