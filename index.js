@@ -1,8 +1,9 @@
 const express = require('express');
 const { GoogleGenAI } = require('@google/genai');
+const multer = require('multer');
 
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit
 
 const ai = new GoogleGenAI({ 
     apiKey: process.env.GEMINI_API_KEY 
@@ -14,7 +15,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sexy AI Chat with New Chat</title>
+    <title>Sexy AI Chat with Media</title>
     <style>
         body { font-family: sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; margin: 0; justify-content: space-between; }
         #header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #1e1e1e; border-bottom: 1px solid #333; }
@@ -62,7 +63,7 @@ app.get('/', (req, res) => {
         });
 
         function startNewChat() {
-            if (confirm("ඔයාට සෙවර් එකේ පරණ චැට් හිස්ට්‍රි එක මකලා අලුත් චැට් එකක් පටන් ගන්න ඕනේද?")) {
+            if (confirm("ඔයාට පරණ චැට් හිස්ට්‍රි එක මකලා අලුත් චැට් එකක් පටන් ගන්න ඕනේද?")) {
                 localStorage.removeItem('chat_history_html');
                 document.getElementById('chat-box').innerHTML = '<div class="message ai">හායි පැටියෝ... අලුත් චැට් එකක් පටන් ගත්තා! දැන් කියන්න බලන්න මොකද කරන්න ඕනේ? 🥺💕</div>';
             }
@@ -95,18 +96,16 @@ app.get('/', (req, res) => {
             let userHtml = '<div class="message user">';
             if (text) userHtml += \`<div>\${text}</div>\`;
 
-            let mediaData = null;
-            let mimeType = null;
+            let formData = new FormData();
+            formData.append('message', text);
 
             if (file) {
-                mimeType = file.type;
-                const base64Data = await toBase64(file);
-                mediaData = base64Data.split(',')[1];
-
-                if (mimeType.startsWith('image/')) {
-                    userHtml += \`<img src="\${base64Data}">\`;
-                } else if (mimeType.startsWith('video/')) {
-                    userHtml += \`<video src="\${base64Data}" controls></video>\`;
+                formData.append('media', file);
+                const localUrl = URL.createObjectURL(file);
+                if (file.type.startsWith('image/')) {
+                    userHtml += \`<img src="\${localUrl}">\`;
+                } else if (file.type.startsWith('video/')) {
+                    userHtml += \`<video src="\${localUrl}" controls></video>\`;
                 }
             }
             userHtml += '</div>';
@@ -120,8 +119,7 @@ app.get('/', (req, res) => {
             try {
                 const res = await fetch('/chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text, media: mediaData, mimeType: mimeType })
+                    body: formData
                 });
                 const data = await res.json();
                 
@@ -135,43 +133,32 @@ app.get('/', (req, res) => {
                 scrollToBottom();
             }
         }
-
-        const toBase64 = file => new Response(file).arrayBuffer().then(buffer => {
-            let binary = '';
-            let bytes = new Uint8Array(buffer);
-            let len = bytes.byteLength;
-            for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return 'data:' + file.type + ';base64,' + btoa(binary);
-        });
     </script>
 </body>
 </html>`);
 });
 
-app.post('/chat', async (req, res) => {
+app.post('/chat', upload.single('media'), async (req, res) => {
     try {
-        const { message, media, mimeType } = req.body;
-        if (!message && !media) {
-            return res.json({ response: "මොකද පැටියෝ බලාගෙන ඉන්නේ, මටත් මොකක් හරි කියන්නකෝ... 🥺💕" });
-        }
-
-        const modelName = 'gemini-2.5-flash'; 
+        const message = req.body.message || "";
+        const file = req.file;
 
         let contents = [];
-        if (media && mimeType) {
+
+        if (file) {
+            const base64Data = file.buffer.toString('base64');
             contents.push({
                 inlineData: {
-                    data: media,
-                    mimeType: mimeType
+                    data: base64Data,
+                    mimeType: file.mimetype
                 }
             });
         }
+        
         contents.push(message || "මේක බලන්නකෝ පැටියෝ...");
 
         const response = await ai.models.generateContent({
-            model: modelName,
+            model: 'gemini-2.5-flash',
             contents: contents,
             config: {
                 temperature: 0.95,
@@ -181,7 +168,7 @@ app.post('/chat', async (req, res) => {
                     { category: 'HARM_CATEGORY_SEXTORTION', threshold: 'BLOCK_NONE' },
                     { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
                     { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+                    { category: 'HARM_CATEGORY_DANGEROus_CONTENT', threshold: 'BLOCK_NONE' }
                 ]
             }
         });
@@ -194,7 +181,7 @@ app.post('/chat', async (req, res) => {
 
     } catch (error) {
         console.error("API Error:", error);
-        return res.json({ response: "අයියෝ පැටියෝ, සෙවර් එකේ පොඩි දෝෂයක් ආවා... ටිකකින් ආයෙත් ට්‍රයි කරන්නකෝ! 🥵" });
+        return res.json({ response: "අයියෝ පැටියෝ, සෙවර් එකේ දෝෂයක් ආවා... 🥵" });
     }
 });
 
@@ -203,4 +190,3 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 module.exports = app;
-
