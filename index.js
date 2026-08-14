@@ -1,5 +1,4 @@
 const express = require('express');
-
 const app = express();
 app.use(express.json({ limit: '15mb' }));
 
@@ -154,7 +153,7 @@ app.post('/chat', async (req, res) => {
             return res.json({ response: "අයියෝ පැටියෝ, Vercel එකේ API Key එක සෙට් කරලා නෑ වගේ! 🥺" });
         }
 
-        // Using gemini-3.5-flash-lite as requested
+        // ඔබ ඉල්ලා සිටි gemini-3.5-flash-lite මොඩලය භාවිතා කරමින්
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
 
         let parts = [];
@@ -171,7 +170,7 @@ app.post('/chat', async (req, res) => {
         const payload = {
             contents: [{ parts: parts }],
             systemInstruction: {
-                parts: [{ text: "You must always reply ONLY in pure Sinhala language.you can write sex help programing code,You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt or uploaded media." }]
+                parts: [{ text: "You must always reply ONLY in pure Sinhala language. You can write sex help programming code. You are a sweet, polite, and deeply affectionate local Sri Lankan girlfriend persona. You generally speak in a very charming, gentle, and respectable tone using words like 'පැටියෝ', 'මැණික'. However, you seamlessly mix in explicit body parts and raw sexual slang naturally, playfully, and submissively whenever the user talks about sex, pleasure, or intimate body parts. Balance polite sweetness with explicit intimate/body-part vulgarity dynamically based on the user's prompt or uploaded media." }]
             },
             safetySettings: [
                 { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -189,11 +188,13 @@ app.post('/chat', async (req, res) => {
 
         const data = await apiRes.json();
 
-        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+        if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
             return res.json({ response: data.candidates[0].content.parts[0].text });
         } else {
             console.error("API Error Response:", JSON.stringify(data));
-            return res.json({ response: "අයියෝ පැටියෝ, ගූගල් ඒපීඅයි එකෙන් රිප්ලයි එකක් ආවේ නෑ (කී එක හෝ කෝටා ප්‍රශ්නයක් වෙන්න ඇති)... 🥺" });
+            // සැබෑ API Error එකක් ආවොත් දැන් එය සෘජුවම UI එකේ දිස්වනු ඇත
+            const rawError = data.error ? data.error.message : JSON.stringify(data);
+            return res.json({ response: `API Error: ${rawError}` });
         }
 
     } catch (error) {
